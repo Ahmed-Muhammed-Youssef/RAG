@@ -1,4 +1,5 @@
-﻿using Qdrant.Client;
+﻿using Google.Protobuf.Collections;
+using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using RagLib.Core.Interfaces;
 using RagLib.Core.Models;
@@ -24,15 +25,35 @@ public class QdrantVectorStore : IVectorStore
     }
 
     /// <inheritdoc/>
-    public Task AddAsync(string collection, DocumentChunk chunk, List<float> vector)
+    public async Task AddAsync(string collection, DocumentChunk chunk, float[] vector)
     {
-        throw new NotImplementedException();
+        PointStruct point = new()
+        {
+            Id = Guid.NewGuid(),
+            Vectors = vector.ToArray()
+        };
+
+        FillPayload(point.Payload, chunk);
+
+        await _client.UpsertAsync(collection, [point]);
     }
 
     /// <inheritdoc/>
-    public Task AddRangeAsync(string collection, IEnumerable<(DocumentChunk chunk, List<float> vector)> items)
+    public async Task AddRangeAsync(string collection, IEnumerable<(DocumentChunk chunk, float[] vector)> items)
     {
-        throw new NotImplementedException();
+        IEnumerable<PointStruct> points = items.Select(item =>
+        {
+            PointStruct point = new()
+            {
+                Id = Guid.NewGuid(),
+                Vectors = item.vector.ToArray()
+            };
+
+            FillPayload(point.Payload, item.chunk);
+            return point;
+        });
+
+        await _client.UpsertAsync(collection, points.ToList());
     }
 
     /// <inheritdoc/>
@@ -46,9 +67,9 @@ public class QdrantVectorStore : IVectorStore
     }
 
     /// <inheritdoc/>
-    public Task DeleteAsync(string collection, string id)
+    public async Task DeleteAsync(string collection, Guid id)
     {
-        throw new NotImplementedException();
+        await _client.DeleteAsync(collection, id);
     }
 
     /// <inheritdoc/>
@@ -58,9 +79,12 @@ public class QdrantVectorStore : IVectorStore
     }
 
     /// <inheritdoc/>
-    public Task<DocumentChunk?> GetById(string collection, string id)
+    public async Task<DocumentChunk?> GetById(string collection, Guid id)
     {
-        throw new NotImplementedException();
+        List<RetrievedPoint> response = [.. (await _client.RetrieveAsync(collection, id))];
+        RetrievedPoint? result = response.FirstOrDefault();
+
+        return result is not null ? FromPayload(result.Payload) : null;
     }
 
     /// <inheritdoc/>
@@ -71,14 +95,81 @@ public class QdrantVectorStore : IVectorStore
     }
 
     /// <inheritdoc/>
-    public Task<List<(DocumentChunk Chunk, float Score)>> SearchAsync(string collection, List<float> queryVector, int topK, IDictionary<string, string>? metadataFilters = null)
+    public async Task<List<(DocumentChunk Chunk, float Score)>> SearchAsync(string collection, float[] queryVector, int topK, IDictionary<string, string>? metadataFilters = null)
     {
-        throw new NotImplementedException();
+        Filter? filter = metadataFilters != null && metadataFilters.Any()
+             ? new Filter
+             {
+                 Must = {
+                    metadataFilters.Select(f => new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = f.Key,
+                            Match = new Match { Text = f.Value }
+                        }
+                    })
+                 }
+             }
+             : null;
+
+        var results = await _client.SearchAsync(collection, queryVector, filter, limit:(ulong)topK);
+
+        return results.Select(res =>
+            (Chunk: FromPayload(res.Payload), res.Score)
+        ).ToList();
     }
 
     /// <inheritdoc/>
-    public Task UpsertAsync(string collection, string id, DocumentChunk chunk, List<float> vector)
+    public async Task UpsertAsync(string collection, Guid id, DocumentChunk chunk, float[] vector)
     {
-        throw new NotImplementedException();
+        PointStruct point = new()
+        {
+            Id = id,
+            Vectors = vector
+        };
+
+        FillPayload(point.Payload, chunk);
+
+        await _client.UpsertAsync(collection, [point]);
+    }
+
+    // ----------- Private Helpers -----------
+
+    private static void FillPayload(MapField<string, Value> payload, DocumentChunk chunk)
+    {
+        payload["index"] = new Value(chunk.Index);
+        payload["content"] = new Value(chunk.Content);
+        payload["document_id"] = new Value(chunk.Metadata.DocumentId.ToString() ?? string.Empty);
+
+        if (chunk.Metadata.PageNumber is int pageNum)
+            payload["page_number"] = new Value(pageNum);
+
+        if(chunk.Metadata.Custom is not null)
+        {
+            foreach (var tag in chunk.Metadata.Custom)
+            {
+                payload[tag.Key] = new Value(tag.Value);
+            }
+        }
+    }
+
+    private static DocumentChunk FromPayload(MapField<string, Value> payload)
+    {
+        var chunk = new DocumentChunk
+        {
+            Index = (int)payload["index"].IntegerValue,
+            Content = payload["content"].StringValue,
+            Metadata = new DocumentMetadata
+            {
+                DocumentId = Guid.Parse(payload.TryGetValue("document_id", out var docIdVal) ? docIdVal.StringValue : ""),
+                PageNumber = payload.TryGetValue("page_number", out var pageVal) ? (int?)pageVal.IntegerValue : null,
+                Custom = payload
+                    .Where(kvp => kvp.Key != "index" && kvp.Key != "content" && kvp.Key != "document_id" && kvp.Key != "page_number")
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.StringValue)
+            }
+        };
+
+        return chunk;
     }
 }

@@ -38,14 +38,14 @@ public interface IVectorStore
     /// <param name="collection">The name of the target collection.</param>
     /// <param name="chunk">The document chunk to store, including optional metadata.</param>
     /// <param name="vector">The embedding vector associated with the document chunk.</param>
-    Task AddAsync(string collection, DocumentChunk chunk, List<float> vector);
+    Task AddAsync(string collection, DocumentChunk chunk, float[] vector);
 
     /// <summary>
     /// Adds multiple embedded document chunks to the specified collection in a single batch.
     /// </summary>
     /// <param name="collection">The name of the target collection.</param>
     /// <param name="items">A list of document chunks paired with their embedding vectors.</param>
-    Task AddRangeAsync(string collection, IEnumerable<(DocumentChunk chunk, List<float> vector)> items);
+    Task AddRangeAsync(string collection, IEnumerable<(DocumentChunk chunk, float[] vector)> items);
 
     /// <summary>
     /// Inserts or replaces a document chunk identified by its ID in the given collection.
@@ -55,14 +55,14 @@ public interface IVectorStore
     /// <param name="id">The unique identifier for the document chunk.</param>
     /// <param name="chunk">The document chunk to store or update.</param>
     /// <param name="vector">The embedding vector associated with the chunk.</param>
-    Task UpsertAsync(string collection, string id, DocumentChunk chunk, List<float> vector);
+    Task UpsertAsync(string collection, Guid id, DocumentChunk chunk, float[] vector);
 
     /// <summary>
     /// Deletes a document chunk from a collection by its unique ID.
     /// </summary>
     /// <param name="collection">The name of the collection to delete from.</param>
     /// <param name="id">The unique identifier of the chunk to delete.</param>
-    Task DeleteAsync(string collection, string id);
+    Task DeleteAsync(string collection, Guid id);
 
     /// <summary>
     /// Retrieves a document chunk by its ID from the specified collection.
@@ -70,7 +70,7 @@ public interface IVectorStore
     /// <param name="collection">The name of the collection containing the chunk.</param>
     /// <param name="id">The unique identifier of the chunk.</param>
     /// <returns>The corresponding document chunk, or null if not found.</returns>
-    Task<DocumentChunk?> GetById(string collection, string id);
+    Task<DocumentChunk?> GetById(string collection, Guid id);
 
 
     // ----------- Vector Search -----------
@@ -85,7 +85,7 @@ public interface IVectorStore
     /// <returns>A list of matched document chunks with their associated similarity scores.</returns>
     Task<List<(DocumentChunk Chunk, float Score)>> SearchAsync(
         string collection,
-        List<float> queryVector,
+        float[] queryVector,
         int topK,
         IDictionary<string, string>? metadataFilters = null
     );
