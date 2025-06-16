@@ -5,7 +5,7 @@ namespace Samples.Console.Embedders;
 /// <summary>
 /// Demonstrates how to use GeminiEmbedder to generate text embeddings.
 /// </summary>
-public static class GeminiEmbedderSample
+internal static class GeminiEmbedderSample
 {
     /// <summary>
     /// Runs a Gemini embedding example using a sample query.

@@ -9,7 +9,7 @@ namespace Samples.Console.VectorStores;
 /// - Performing a similarity search
 /// - Listing and deleting collections
 /// </summary>
-public static class QdrantVectorStoreSample
+internal static class QdrantVectorStoreSample
 {
     /// <summary>
     /// Runs a complete vector store workflow using a dummy vector.

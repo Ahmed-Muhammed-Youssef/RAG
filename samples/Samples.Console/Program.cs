@@ -3,7 +3,7 @@ using Samples.Console.VectorStores;
 
 namespace Samples.Console;
 
-public class Program
+internal static class Program
 {
     static async Task Main()
     {
