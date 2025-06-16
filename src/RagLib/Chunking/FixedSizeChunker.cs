@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
+using RagLib.Core.Interfaces;
 using RagLib.Core.Models;
 
 namespace RagLib.Chunking;
 
-public class FixedSizeChunker
+public class FixedSizeChunker : IDocumentChunker
 {
     private readonly ChunkerOptions _options;
     public FixedSizeChunker(IOptions<ChunkerOptions> options)
