@@ -1,20 +1,13 @@
-﻿using RagLib.Embedders;
+﻿using Samples.Console.Embedders;
+using Samples.Console.VectorStores;
 
 namespace Samples.Console;
 
 public class Program
 {
-    static async Task Main(string[] args)
+    static async Task Main()
     {
-        await GeminiEmbedderSamples();
-    }
-
-    private static async Task GeminiEmbedderSamples()
-    {
-        string apiKey = "Add your API key";
-        var embedder = new GeminiEmbedder(apiKey);
-
-        var embedding = await embedder.EmbedAsync("What is RAG?");
-        System.Console.WriteLine(string.Join(", ", embedding));
-    }
+        await GeminiEmbedderSample.RunSample();
+        await QdrantVectorStoreSample.RunSample();
+    }  
 }
