@@ -4,8 +4,19 @@ using RagLib.Core.Models;
 namespace RagLib;
 
 /// <inheritdoc/>
-public class RagEngine(IDocumentChunker chunker, IEmbedder embedder, IVectorStore vectorStore) : IRagEngine
+public class RagEngine : IRagEngine
 {
+    private readonly IDocumentChunker chunker;
+    private readonly IEmbedder embedder;
+    private readonly IVectorStore vectorStore;
+
+    internal RagEngine(IDocumentChunker chunker, IEmbedder embedder, IVectorStore vectorStore)
+    {
+        this.chunker = chunker;
+        this.embedder = embedder;
+        this.vectorStore = vectorStore;
+    }
+
     /// <inheritdoc/>
     public async Task<List<DocumentChunk>> GetRelevantChunksAsync(string collection, string query, RagQueryOptions? options = null)
     {

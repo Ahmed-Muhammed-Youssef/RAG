@@ -1,8 +1,5 @@
-﻿using Microsoft.Extensions.Options;
-using RagLib.Chunking;
+﻿using RagLib.Core.Builders;
 using RagLib.Core.Models;
-using RagLib.Embedders;
-using RagLib.VectorStores;
 
 namespace Samples.Console.RagEngine;
 
@@ -10,21 +7,12 @@ internal class RagEngineSample
 {
     public static async Task RunSample()
     {
-        // Create a fixed-size chunker with a chunk size of 512 characters
-        ChunkerOptions chunkerOptions = new()
-        {
-            ChunkSize = 512
-        };
-
-        IOptions<ChunkerOptions> options = Options.Create(chunkerOptions);
-        FixedSizeChunker chunker = new(options);
-
-        // Initialize the embedder and vector store
-        GeminiEmbedder embedder = new("Add your API key");
-        QdrantVectorStore vectorStore = new("localhost");
-
-        // Create the RAG engine
-        RagLib.RagEngine ragEngine = new(chunker, embedder, vectorStore);
+        // Create a RagEngine instance with a fixed-size chunker, Gemini embedder, and Qdrant vector store
+        var ragEngine = RagEngineBuilder.Create()
+            .UseFixedSizeChunker(512)
+            .UseGeminiEmbedder("your-api-key")
+            .UseQdrantStore("localhost")
+            .Build();
 
         // Sample document to ingest
         string document = "RAG stands for Retrieval-Augmented Generation, a technique that combines retrieval of relevant documents with generative models.";
