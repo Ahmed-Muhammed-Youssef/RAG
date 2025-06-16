@@ -1,20 +1,30 @@
-﻿using Mscc.GenerativeAI;
-using RagLib.Core.Interfaces;
+﻿using RagLib.Core.Interfaces;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RagLib.Embedders;
 
+/// <inheritdoc/>
 public class GeminiEmbedder : IEmbedder
 {
-    private readonly GenerativeModel _model;
+    private readonly string _apiKey;
+    private readonly HttpClient _httpClient;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeminiEmbedder"/> class using the specified Gemini API key.
     /// </summary>
     /// <param name="apiKey">Your API key from Google AI Studio or Google Cloud Platform.</param>
-    public GeminiEmbedder(string apiKey)
+    /// <param name="handler"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public GeminiEmbedder(string apiKey, HttpMessageHandler? handler = null!)
     {
-        GoogleAI ai = new(apiKey: apiKey);
-        _model = ai.GenerativeModel(model: Model.Embedding001);
+        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        _httpClient = new HttpClient(handler ?? new HttpClientHandler())
+        {
+            BaseAddress = new Uri("https://generativelanguage.googleapis.com")
+        };
     }
 
     /// <summary>
@@ -29,28 +39,64 @@ public class GeminiEmbedder : IEmbedder
     /// </exception>
     public async Task<List<float>> EmbedAsync(string text)
     {
-        EmbedContentResponse response = await _model.EmbedContent(new EmbedContentRequest
-        {
-            Content = new ContentResponse(text),
-            TaskType = TaskType.RetrievalDocument
-        });
+        if (string.IsNullOrWhiteSpace(text))
+            throw new ArgumentException("Text cannot be null or whitespace.", nameof(text));
 
-        return ExtractEmbeddings(response);
+        EmbeddingRequest request = new()
+        {
+            Content = new EmbeddingParts
+            { 
+                Parts =
+                [
+                    new EmbeddingTextWrapper { Text = text }
+                ]
+            }
+        };
+
+        HttpResponseMessage response = await _httpClient.PostAsJsonAsync($"/v1beta/models/text-embedding-004:embedContent?key={_apiKey}", request);
+
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<EmbedResponse>();
+        return result?.Embedding?.Values ?? throw new InvalidOperationException("Embedding not returned.");
+
     }
 
-    /// <summary>
-    /// Extracts and flattens the list of embedding vectors from the Gemini API response.
-    /// </summary>
-    /// <param name="response">The response returned from the Gemini embedding request.</param>
-    /// <returns>A single flattened embedding vector.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the response contains no embeddings.</exception>
-    private static List<float> ExtractEmbeddings(EmbedContentResponse response)
+    private class EmbeddingRequest
     {
-        if (response.Embeddings == null || response.Embeddings.Count == 0)
-        {
-            throw new InvalidOperationException("No embeddings found in the response.");
-        }
+        [JsonPropertyName("model")]
+        public string Model { get; set; } = "models/text-embedding-004";
 
-        return response.Embeddings.SelectMany(e => e.Values).ToList();
+        [JsonPropertyName("content")]
+        public EmbeddingParts Content { get; set; } = new();
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = "";
+
+        [JsonPropertyName("taskType")]
+        public string TaskType { get; set; } = "RETRIEVAL_DOCUMENT";
+    }
+
+    private class EmbeddingParts
+    {
+        [JsonPropertyName("parts")]
+        public List<EmbeddingTextWrapper> Parts { get; set; } = [];
+    }
+
+    private class EmbeddingTextWrapper
+    {
+        [JsonPropertyName("text")]
+        public string Text { get; set; } = string.Empty;
+    }
+    public class EmbedResponse
+    {
+        [JsonPropertyName("embedding")]
+        public ContentEmbedding? Embedding { get; set; }
+    }
+
+    public class ContentEmbedding
+    {
+        [JsonPropertyName("values")]
+        public List<float> Values { get; set; } = [];
     }
 }
