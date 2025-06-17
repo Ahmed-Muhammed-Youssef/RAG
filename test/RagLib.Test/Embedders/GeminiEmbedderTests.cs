@@ -9,11 +9,13 @@ public class GeminiEmbedderTests
     public async Task EmbedAsync_Returns_ValidEmbedding()
     {
         // Arrange
-        var mockHandler = new MockHttpMessageHandler();
+        MockHttpMessageHandler mockHandler = new MockHttpMessageHandler();
         mockHandler.When("*").Respond("application/json",
             @"{ ""embedding"": { ""values"": [1.1, 2.2, 3.3] } }");
 
-        GeminiEmbedder embedder = new("fake-api-key", mockHandler);
+        HttpClient mockHttpClient = new(mockHandler);
+
+        GeminiEmbedder embedder = new("fake-api-key", mockHttpClient);
 
         // Act
         List<float> result = await embedder.EmbedAsync("test");

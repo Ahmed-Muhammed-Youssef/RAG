@@ -11,20 +11,19 @@ public class GeminiEmbedder : IEmbedder
     private readonly string _apiKey;
     private readonly HttpClient _httpClient;
 
-
     /// <summary>
     /// Initializes a new instance of the <see cref="GeminiEmbedder"/> class using the specified Gemini API key.
     /// </summary>
     /// <param name="apiKey">Your API key from Google AI Studio or Google Cloud Platform.</param>
-    /// <param name="handler"></param>
+    /// <param name="httpClient">Preconfigured HttpClient (DI-friendly).</param>
     /// <exception cref="ArgumentNullException"></exception>
-    public GeminiEmbedder(string apiKey, HttpMessageHandler? handler = null!)
+    public GeminiEmbedder(string apiKey, HttpClient httpClient)
     {
         _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-        _httpClient = new HttpClient(handler ?? new HttpClientHandler())
-        {
-            BaseAddress = new Uri("https://generativelanguage.googleapis.com")
-        };
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+
+        // Tightly coupled to Gemini API; OK to hardcode.
+        _httpClient.BaseAddress = new Uri("https://generativelanguage.googleapis.com");
     }
 
     /// <summary>

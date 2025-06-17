@@ -15,8 +15,12 @@ public class RagEngineBuilder
     private IEmbedder? _embedder;
     private IVectorStore? _vectorStore;
     private IDocumentChunker? _chunker;
+    private readonly HttpClientHandler _httpClientHandler;
 
-    private RagEngineBuilder() { }
+    private RagEngineBuilder() 
+    {
+        _httpClientHandler = new();
+    }
 
     /// <summary>
     /// Starts building a new RagEngine instance.
@@ -37,7 +41,7 @@ public class RagEngineBuilder
     /// </summary>
     public RagEngineBuilder UseGeminiEmbedder(string apiKey)
     {
-        _embedder = new GeminiEmbedder(apiKey);
+        _embedder = new GeminiEmbedder(apiKey, new HttpClient(_httpClientHandler));
         return this;
     }
 

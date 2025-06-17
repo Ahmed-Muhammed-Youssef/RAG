@@ -13,7 +13,10 @@ internal static class GeminiEmbedderSample
     public static async Task RunSample()
     {
         string apiKey = "Add your API key";
-        var embedder = new GeminiEmbedder(apiKey);
+
+        HttpClient client = new();
+
+        var embedder = new GeminiEmbedder(apiKey, client);
 
         var embedding = await embedder.EmbedAsync("What is RAG?");
         System.Console.WriteLine(string.Join(", ", embedding));
